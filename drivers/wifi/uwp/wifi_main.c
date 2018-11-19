@@ -583,7 +583,9 @@ static int uwp_init(struct device *dev)
 			return ret;
 		}
 
-		ret = wifi_cmd_get_cp_info(priv);
+		ret = wifi_cmd_get_cp_info(priv,
+				CONFIG_WIFI_UWP_TOTAL_RX_ADDR_NUM,
+				CONFIG_WIFI_UWP_MAX_RX_ADDR_NUM);
 		if (ret) {
 			LOG_ERR("Get cp info failed.");
 			return ret;

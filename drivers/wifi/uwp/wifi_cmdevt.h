@@ -79,6 +79,8 @@ struct cmd_get_cp_info {
 	struct trans_hdr trans_header;
 	u32_t version;
 	char mac[ETH_ALEN];
+	u8_t total_buff;
+	u8_t max_buff;
 } __packed;
 
 struct cmd_stop {
@@ -187,7 +189,8 @@ struct event_new_station {
 
 /* int wifi_cmd_load_ini(u8_t *pAd); */
 /* int wifi_cmd_set_sta_connect_info(u8_t *pAd, char *ssid, char *key); */
-int wifi_cmd_get_cp_info(struct wifi_priv *priv);
+int wifi_cmd_get_cp_info(struct wifi_priv *priv,
+		u8_t total_buff, u8_t max_buff);
 int wifi_cmd_open(struct wifi_device *wifi_dev);
 int wifi_cmd_close(struct wifi_device *wifi_dev);
 int wifi_cmd_scan(struct wifi_device *wifi_dev,

@@ -252,13 +252,17 @@ int wifi_cmd_disconnect(struct wifi_device *wifi_dev)
 	return 0;
 }
 
-int wifi_cmd_get_cp_info(struct wifi_priv *priv)
+int wifi_cmd_get_cp_info(struct wifi_priv *priv,
+		u8_t total_buff, u8_t max_buff)
 {
 	struct cmd_get_cp_info cmd;
 	int ret;
 	int len;
 
 	memset(&cmd, 0, sizeof(cmd));
+	cmd.total_buff = total_buff;
+	cmd.max_buff = max_buff;
+
 	ret = wifi_cmd_send(WIFI_CMD_GET_CP_INFO, (char *)&cmd, sizeof(cmd),
 			    (char *)&cmd, &len);
 	if (ret) {
