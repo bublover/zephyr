@@ -11,7 +11,8 @@ menuconfig WIFI_UWP
 	depends on WIFI
 	select NETWORKING
 	select NET_BUF
-	select NET_L2_ETHERNET
+#select NET_L2_ETHERNET
+	select NET_L2_IEEE80211
 	select NET_IPV4
 
 if WIFI_UWP

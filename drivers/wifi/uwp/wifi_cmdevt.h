@@ -7,7 +7,7 @@
 #ifndef __WIFI_CMDEVT_H__
 #define __WIFI_CMDEVT_H__
 
-#include <net/wifimgr_drv.h>
+#include <net/ieee80211.h>
 
 #include "wifi_main.h"
 

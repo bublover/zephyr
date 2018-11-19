@@ -12,8 +12,9 @@
 #ifndef _WIFIMGR_H_
 #define _WIFIMGR_H_
 
-#include <net/wifimgr_drv.h>
+#include <net/ieee80211.h>
 #include <net/wifimgr_api.h>
+#include <net/net_mgmt.h>
 
 #include "os_adapter.h"
 #include "cmd_prcs.h"

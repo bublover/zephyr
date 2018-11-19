@@ -17,7 +17,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include <errno.h>
 #include <net/net_pkt.h>
 #include <net/net_if.h>
-#include <net/ethernet.h>
+#include <net/ieee80211.h>
 
 #include "wifi_main.h"
 #include "wifi_rf.h"
@@ -384,7 +384,7 @@ static void uwp_iface_init(struct net_if *iface)
 
 	/* Net stack has not been fit for softap as of now. */
 	if (wifi_dev->mode == WIFI_MODE_STA) {
-		ethernet_init(iface);
+		ieee80211_init(iface);
 	}
 
 	net_if_set_link_addr(iface, wifi_dev->mac,
@@ -522,9 +522,9 @@ static int uwp_iface_tx(struct net_if *iface, struct net_pkt *pkt)
 }
 
 
-static const struct wifi_drv_api uwp_api = {
-	.eth_api.iface_api.init		= uwp_iface_init,
-	.eth_api.iface_api.send		= uwp_iface_tx,
+static const struct ieee80211_api uwp_api = {
+	.iface_api.init				= uwp_iface_init,
+	.iface_api.send				= uwp_iface_tx,
 	.open						= uwp_mgmt_open,
 	.close						= uwp_mgmt_close,
 	.scan						= uwp_mgmt_scan,
@@ -601,12 +601,12 @@ NET_DEVICE_INIT(uwp_ap, CONFIG_WIFI_AP_DRV_NAME,
 		uwp_init, &uwp_wifi_priv_data, NULL,
 		CONFIG_WIFI_INIT_PRIORITY,
 		&uwp_api,
-		ETHERNET_L2, NET_L2_GET_CTX_TYPE(ETHERNET_L2),
+		IEEE80211_L2, NET_L2_GET_CTX_TYPE(IEEE80211_L2),
 		MTU);
 
 NET_DEVICE_INIT(uwp_sta, CONFIG_WIFI_STA_DRV_NAME,
 		uwp_init, &uwp_wifi_priv_data, NULL,
 		CONFIG_WIFI_INIT_PRIORITY,
 		&uwp_api,
-		ETHERNET_L2, NET_L2_GET_CTX_TYPE(ETHERNET_L2),
+		IEEE80211_L2, NET_L2_GET_CTX_TYPE(IEEE80211_L2),
 		MTU);
