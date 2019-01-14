@@ -44,26 +44,64 @@ static u8_t rx_cmdevt_buf[RX_CMDEVT_SIZE];
 static wifi_slist_t rx_buf_list;
 
 
+static struct net_pkt* wifi_rx_data_process(struct wifi_priv *priv,
+		struct net_buf *pkt_buf, struct net_pkt *rx_pkt, int *id)
+{
+	struct rx_msdu_desc *rx_msdu = NULL;
+	struct net_pkt* pkt = NULL;
+	static int ctx_id = -1;
+	u32_t data_len;
+
+	rx_msdu =
+		(struct rx_msdu_desc *)(pkt_buf->data +
+					sizeof(struct rx_mh_desc));
+	data_len = rx_msdu->msdu_len + rx_msdu->msdu_offset;
+	__ASSERT(data_len > 0 && data_len < CONFIG_NET_BUF_DATA_SIZE,
+		 "Invalid data len: %d", data_len);
+
+	__ASSERT(rx_msdu->ctx_id == 0 || rx_msdu->ctx_id == 1,
+			"Invalid ctx_id: %d", rx_msdu->ctx_id);
+
+	if (ctx_id == -1) {
+		/* First */
+		LOG_INF("FIRST");
+		pkt = rx_pkt;
+	}
+	else if (ctx_id != rx_msdu->ctx_id) {
+		/* Different interface */
+		pkt = net_pkt_get_reserve_rx(0, K_FOREVER);
+		*id = ctx_id;
+		LOG_INF("DIFFERENT");
+	} else {
+		/* The same interface */
+		pkt = rx_pkt;
+		LOG_INF("SAME");
+	}
+	
+	net_buf_add(pkt_buf, data_len);
+	net_buf_pull(pkt_buf, rx_msdu->msdu_offset);
+
+	net_pkt_frag_add(pkt, pkt_buf);
+
+	ctx_id = rx_msdu->ctx_id;
+
+	return pkt;
+}
+
 int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
 {
 	struct rxc *rx_complete_buf = (struct rxc *)data;
 	struct rxc_ddr_addr_trans_t *rxc_addr = &rx_complete_buf->rxc_addr;
-	struct rx_msdu_desc *rx_msdu = NULL;
 	struct net_if *iface;
+	struct net_buf *pkt_buf;
+	struct net_pkt *pkt = NULL;
+	struct net_pkt *rx_pkt;
+	int i = 0;
+	int ctx_id = 0;
 	u32_t payload = 0;
 	u32_t buf;
 
-	struct net_pkt *rx_pkt;
-	struct net_buf *pkt_buf;
-	int ctx_id = 0;
-	int i = 0;
-	u32_t data_len;
-
 	rx_pkt = net_pkt_get_reserve_rx(0, K_FOREVER);
-	if (!rx_pkt) {
-		LOG_ERR("Could not allocate rx packet.");
-		return -ENOMEM;
-	}
 
 	for (i = 0; i < rxc_addr->num; i++) {
 		memcpy(&payload, rxc_addr->addr_addr[i], 4);
@@ -83,30 +121,23 @@ int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
 		wifi_buf_slist_remove(&rx_buf_list, &pkt_buf->node);
 		k_mutex_unlock(&rx_buf_mutex);
 
-		rx_msdu =
-			(struct rx_msdu_desc *)(pkt_buf->data +
-						sizeof(struct rx_mh_desc));
-		ctx_id = rx_msdu->ctx_id;
-		data_len = rx_msdu->msdu_len + rx_msdu->msdu_offset;
-		__ASSERT(data_len > 0 && data_len < CONFIG_NET_BUF_DATA_SIZE,
-			 "Invalid data len: %d", data_len);
+		pkt = wifi_rx_data_process(priv, pkt_buf, rx_pkt, &ctx_id);
+		if (rx_pkt != pkt) {
+			/* No more combination. */
+			LOG_INF("Need to report last packet");
+			iface = priv->wifi_dev[ctx_id].iface;
+			if (net_recv_data(iface, rx_pkt) < 0) {
+				LOG_ERR("PKT %p not received by L2 stack.", rx_pkt);
+				net_pkt_unref(rx_pkt);
+			}
 
-		net_buf_add(pkt_buf, data_len);
-		net_buf_pull(pkt_buf, rx_msdu->msdu_offset);
-
-		net_pkt_frag_add(rx_pkt, pkt_buf);
+			rx_pkt = pkt;
+		}
 	}
 
-	/**
-	 * FIXME: Find iface by ctx_id.
-	 * There could be different ctx_id of rx_msdu in rxc.
-	 */
-	iface = priv->wifi_dev[WIFI_DEV_STA].iface;
-
-	if (!iface) {
-		LOG_ERR("Iface null.");
-		net_pkt_unref(rx_pkt);
-	} else {
+	if (rx_pkt == pkt) {
+		LOG_INF("Need to report left packet");
+		iface = priv->wifi_dev[ctx_id].iface;
 		if (net_recv_data(iface, rx_pkt) < 0) {
 			LOG_ERR("PKT %p not received by L2 stack.", rx_pkt);
 			net_pkt_unref(rx_pkt);
