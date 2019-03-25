@@ -59,7 +59,14 @@ int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
 	int i = 0;
 	u32_t data_len;
 
-	rx_pkt = net_pkt_get_reserve_rx(0, K_FOREVER);
+	/**
+	 * FIXME: Find iface by ctx_id.
+	 * There could be different ctx_id of rx_msdu in rxc.
+	 */
+	iface = priv->wifi_dev[WIFI_DEV_STA].iface;
+
+	rx_pkt = net_pkt_rx_alloc_with_buffer(iface, 1800,
+					   AF_UNSPEC, 0, K_FOREVER);
 	if (!rx_pkt) {
 		LOG_ERR("Could not allocate rx packet.");
 		return -ENOMEM;
@@ -96,12 +103,6 @@ int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
 
 		net_pkt_frag_add(rx_pkt, pkt_buf);
 	}
-
-	/**
-	 * FIXME: Find iface by ctx_id.
-	 * There could be different ctx_id of rx_msdu in rxc.
-	 */
-	iface = priv->wifi_dev[WIFI_DEV_STA].iface;
 
 	if (!iface) {
 		LOG_ERR("Iface null.");
@@ -290,7 +291,7 @@ static int wifi_tx_empty_buf_(int num)
 
 	for (i = 0; i < num; i++) {
 		/* Reserve a data frag to receive the frame. */
-		pkt_buf = net_pkt_get_reserve_rx_data(0, K_FOREVER);
+		pkt_buf = net_pkt_get_reserve_rx_data(K_FOREVER);
 		if (!pkt_buf) {
 			LOG_ERR("Could not allocate rx buf %d.", i);
 			return -ENOMEM;
