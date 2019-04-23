@@ -446,6 +446,8 @@ k_tid_t z_impl_k_thread_create(struct k_thread *new_thread,
 		schedule_new_thread(new_thread, delay);
 	}
 
+	printk("\n%s  id:%p  entry:%p\n", __func__, new_thread, entry);
+
 	return new_thread;
 }
 
